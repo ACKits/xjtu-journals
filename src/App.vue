@@ -161,7 +161,7 @@ async function loadExcelFilesFromSrc() {
   totalFileCount.value = 0
 
   try {
-    const manifestRes = await fetch('/excel/index.json', { cache: 'no-store' })
+    const manifestRes = await fetch(`${import.meta.env.BASE_URL}excel/index.json`, { cache: 'no-store' })
     if (!manifestRes.ok) throw new Error(`HTTP ${manifestRes.status}`)
 
     const manifest = await manifestRes.json()
@@ -173,7 +173,7 @@ async function loadExcelFilesFromSrc() {
     for (const fileName of files) {
       await sleep(20)
       try {
-        const res = await fetch(`/excel/${encodeURIComponent(fileName)}`)
+        const res = await fetch(`${import.meta.env.BASE_URL}excel/${encodeURIComponent(fileName)}`)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const buffer = await res.arrayBuffer()
         const workbook = XLSX.read(buffer, { type: 'array', cellFormula: false, cellHTML: false, cellStyles: false })
