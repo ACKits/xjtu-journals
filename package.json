@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build --mode demo",
+    "build": "vite build --mode demo && rm -rf dist/excel",
     "preview": "vite preview",
     "deploy": "gh-pages -d dist",
     "prebuild": "node scripts/generate-manifest.js",
