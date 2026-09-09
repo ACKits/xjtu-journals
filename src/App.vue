@@ -151,51 +151,46 @@ const showBackToTop = ref(false)
 
 const hasSearchQuery = computed(() => Boolean(searchQuery.value?.trim()))
 
-const excelFileModules = import.meta.glob('./excel/*.{xlsx,xls}', {
-  eager: true,
-  as: 'url'
-})
-
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 async function loadExcelFilesFromSrc() {
-  const entries = Object.entries(excelFileModules)
-  totalFileCount.value = entries.length
-  if (!entries.length) return
+  if (import.meta.env.MODE === 'demo') return
 
   isLoading.value = true
   loadedCount.value = 0
+  totalFileCount.value = 0
 
-  for (const [path, url] of entries) {
-    const fileName = path.split('/').pop()
-    await sleep(20)
-    try {
-      const res = await fetch(url)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const buffer = await res.arrayBuffer()
-      const workbook = XLSX.read(buffer, {
-        type: 'array',
-        cellFormula: false,
-        cellHTML: false,
-        cellStyles: false
-      })
-      const sheetName = workbook.SheetNames[0]
-      const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' })
-      if (jsonData.length) addFileData(fileName, jsonData)
-    } catch (err) {
-      console.error(`加载 ${fileName} 失败:`, err)
-    } finally {
-      loadedCount.value++
+  try {
+    const manifestRes = await fetch('/excel/index.json', { cache: 'no-store' })
+    if (!manifestRes.ok) throw new Error(`HTTP ${manifestRes.status}`)
+
+    const manifest = await manifestRes.json()
+    const files = Array.isArray(manifest.files) ? manifest.files.filter(f => f && f.trim()) : []
+
+    totalFileCount.value = files.length
+    if (!files.length) return
+
+    for (const fileName of files) {
+      await sleep(20)
+      try {
+        const res = await fetch(`/excel/${encodeURIComponent(fileName)}`)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const buffer = await res.arrayBuffer()
+        const workbook = XLSX.read(buffer, { type: 'array', cellFormula: false, cellHTML: false, cellStyles: false })
+        const sheetName = workbook.SheetNames[0]
+        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' })
+        if (jsonData.length) addFileData(fileName, jsonData)
+      } catch (err) {
+        console.error(`加载 ${fileName} 失败:`, err)
+      } finally {
+        loadedCount.value++
+      }
     }
+  } catch (err) {
+    console.error('加载文件清单失败:', err)
+  } finally {
+    isLoading.value = false
   }
-
-  isLoading.value = false
-
-  // 加载完成后自动全选所有文件
-  /*
-  if (fileNames.value.length > 0) {
-    selectedFileNames.value = fileNames.value.slice()
-  }*/
 }
 
 function handleScroll() {

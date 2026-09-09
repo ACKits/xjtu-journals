@@ -24,5 +24,4 @@ dist-ssr
 *.sw?
 
 # Excel data files
-src/excel/*.xlsx
-src/excel/*.xls
+public/excel/
