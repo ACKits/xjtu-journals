@@ -13,7 +13,7 @@
           type="text"
           :value="modelValue"
           @input="$emit('update:modelValue', $event.target.value)"
-          placeholder="输入关键字检索 期刊/会议 是否被收录..."
+          :placeholder="placeholder"
       />
     </div>
   </div>
@@ -24,6 +24,10 @@ defineProps({
   modelValue: {
     type: String,
     default: ''
+  },
+  placeholder: {
+    type: String,
+    default: '输入关键字检索...'
   }
 })
 defineEmits(['update:modelValue'])
@@ -39,7 +43,7 @@ defineEmits(['update:modelValue'])
   align-items: center;
   gap: 7px;
   margin-bottom: 7px;
-  color: #64748b;
+  color: #475569;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.4;

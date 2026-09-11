@@ -67,6 +67,7 @@
         </button>
       </div>
     </div>
+
     <div class="upload-area">
       <label for="fileUpload" class="upload-btn" :class="{ disabled }" :style="disabled ? 'pointer-events: none; opacity: 0.6;' : ''">
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -221,6 +222,7 @@ onUnmounted(() => {
 }
 .trigger-text {
   min-width: 0;
+  font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -341,6 +343,7 @@ onUnmounted(() => {
 .file-option.selected .file-name {
   color: #1e293b;
   font-weight: 500;
+  font-size: 12px;
 }
 .menu-divider {
   height: 1px;
@@ -481,7 +484,42 @@ onUnmounted(() => {
   max-height: 118px;
   overflow-y: auto;
   padding: 1px 1px 2px;
+
+  /* Firefox: 默认透明 */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
 }
+
+/* Firefox: 悬停时显示 */
+.quick-list:hover {
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+/* WebKit (Chrome / Edge / Safari): 默认不占空间 */
+.quick-list::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.quick-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.quick-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: transparent;
+  transition: background .2s ease;
+}
+
+/* 悬停时显示滑块颜色 */
+.quick-list:hover::-webkit-scrollbar-thumb {
+  background: #d5dbe3;
+}
+
+.quick-list:hover::-webkit-scrollbar-thumb:hover {
+  background: #b8c1cd;
+}
+
 .quick-item {
   max-width: 100%;
   min-height: 30px;

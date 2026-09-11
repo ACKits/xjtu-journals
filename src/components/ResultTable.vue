@@ -163,24 +163,34 @@ function formatCellValue(value) {
   width: 100%;
 }
 
-/* 新增的卡片外框，包裹表格和底部分页 */
+/* =========================
+   Table Card
+   ========================= */
+
 .table-card {
   width: 100%;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e8edf3;
   border-radius: 12px;
   background: #fff;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
-  overflow: hidden; /* 防止子元素突圆角 */
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .025);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
-/* 仅包含 table 的容器，只负责表格横向滚动 */
+/* =========================
+   Table Container
+   ========================= */
+
 .table-container {
   width: 100%;
   overflow-x: auto;
   overflow-y: visible;
 }
+
+/* =========================
+   Table
+   ========================= */
 
 .custom-table {
   width: max-content;
@@ -194,30 +204,42 @@ function formatCellValue(value) {
 
 .custom-table th,
 .custom-table td {
-  padding: 11px 14px;
+  padding: 10px 14px;
   text-align: left;
-  border-bottom: 1px solid #f1f3f5;
+  border-bottom: 1px solid #f3f5f7;
   word-break: normal;
   white-space: nowrap;
   vertical-align: middle;
 }
 
+/* Table header */
+
 .custom-table th {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: #f8fafc;
+  background: #f7f9fc;
   color: #64748b;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
+  letter-spacing: .01em;
+  border-bottom: 1px solid #e8edf3;
 }
 
+/* Remove the final row divider */
+
+.custom-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Table rows */
+
 .custom-table tbody tr {
-  transition: background-color 0.15s ease;
+  transition: background-color .15s ease;
 }
 
 .custom-table tbody tr:hover td {
-  background: #f8fafc;
+  background: #f7faff;
 }
 
 .custom-table td {
@@ -225,57 +247,76 @@ function formatCellValue(value) {
   line-height: 1.55;
 }
 
+/* =========================
+   Index Column
+   ========================= */
+
 .col-index {
-  width: 50px;
-  min-width: 50px;
+  width: 48px;
+  min-width: 48px;
   text-align: center !important;
-  color: #9ca3af !important;
-  font-size: 12px !important;
+  color: #a8b0bc !important;
+  font-size: 11px !important;
   font-weight: 500 !important;
 }
 
+/* =========================
+   Source File Column
+   ========================= */
+
 .col-filename {
-  min-width: 240px;
+  min-width: 220px;
+  color: #64748b;
 }
 
 .file-cell {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   min-width: 0;
-  color: #64748b;
+  color: #7b8796;
 }
 
 .file-icon {
-  width: 15px;
-  height: 15px;
-  flex: 0 0 15px;
-  color: #94a3b8;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  color: #a0aab8;
 }
 
 .file-name-text {
   min-width: 0;
   overflow: hidden;
+  color: #7b8796;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* ========== 分页控制栏样式（固定在卡片底部） ========== */
+/* =========================
+   Pagination
+   ========================= */
+
 .pagination-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
-  background: #f8fafc;
-  border-top: 1px solid #e5e7eb;
-  font-size: 12px;
-  color: #64748b;
-  flex-shrink: 0; /* 防止被压缩 */
+  padding: 10px 14px;
+  background: #fff;
+  border-top: 1px solid #eef1f5;
+  font-size: 11px;
+  color: #8a94a3;
+  flex-shrink: 0;
+}
+
+.pagination-info {
+  white-space: nowrap;
 }
 
 .pagination-info .highlight {
+  color: #475569;
   font-weight: 600;
-  color: #374151;
+  font-variant-numeric: tabular-nums;
 }
 
 .pagination-controls {
@@ -284,71 +325,106 @@ function formatCellValue(value) {
   gap: 16px;
 }
 
+/* Page size */
+
 .page-size-selector {
   display: flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
 }
 
 .pagination-select {
+  min-height: 27px;
   padding: 3px 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  background-color: #fff;
-  color: #374151;
-  font-size: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
   outline: none;
+  background: #fff;
+  color: #64748b;
+  font-size: 11px;
   cursor: pointer;
-  transition: border-color 0.15s ease;
+  transition:
+      border-color .15s ease,
+      background-color .15s ease,
+      color .15s ease;
 }
 
 .pagination-select:hover {
-  border-color: #9ca3af;
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  color: #475569;
 }
+
+.pagination-select:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, .06);
+}
+
+/* Page buttons */
 
 .page-buttons {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
 }
 
 .page-num {
-  font-size: 12px;
+  min-width: 48px;
+  font-size: 11px;
+  color: #8a94a3;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .page-num .highlight {
+  color: #2563eb;
   font-weight: 600;
-  color: #374151;
 }
 
 .page-btn {
+  width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  outline: none;
   background: #fff;
-  color: #374151;
-  font-size: 14px;
-  font-weight: 600;
+  color: #64748b;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1;
   cursor: pointer;
-  transition: all 0.15s ease;
   user-select: none;
+  transition:
+      color .15s ease,
+      border-color .15s ease,
+      background-color .15s ease,
+      transform .15s ease;
 }
 
 .page-btn:hover:not(:disabled) {
-  border-color: #9ca3af;
-  background-color: #f1f3f5;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.page-btn:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .page-btn:disabled {
-  opacity: 0.4;
+  opacity: .35;
   cursor: not-allowed;
 }
 
-/* ========== 空状态样式 ========== */
+/* =========================
+   Empty State
+   ========================= */
+
 .empty-state {
   min-height: 300px;
   display: flex;
@@ -356,87 +432,138 @@ function formatCellValue(value) {
   align-items: center;
   justify-content: center;
   padding: 48px 24px;
-  border: 1px solid #eef0f3;
+  border: 1px solid #eef1f5;
   border-radius: 12px;
   background: #fff;
 }
 
 .empty-icon {
-  width: 48px;
-  height: 48px;
+  width: 46px;
+  height: 46px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 16px;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  background: #fafafa;
-  color: #64748b;
+  margin-bottom: 15px;
+  border: 1px solid #e8edf3;
+  border-radius: 11px;
+  background: #f8fafc;
+  color: #94a3b8;
 }
 
 .empty-icon svg {
-  width: 23px;
-  height: 23px;
+  width: 22px;
+  height: 22px;
 }
 
 .empty-title {
   margin-bottom: 6px;
-  color: #374151;
+  color: #475569;
   font-size: 14px;
   font-weight: 600;
 }
 
 .empty-description {
-  color: #9ca3af;
+  color: #a0a9b5;
   font-size: 12px;
   line-height: 1.6;
   text-align: center;
 }
 
+/* =========================
+   Horizontal Scrollbar
+   ========================= */
+
 .table-container::-webkit-scrollbar {
-  height: 8px;
+  height: 7px;
 }
 
 .table-container::-webkit-scrollbar-track {
   background: #f8fafc;
-  border-radius: 4px;
+  border-radius: 999px;
 }
 
 .table-container::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 4px;
+  background: #d5dce6;
+  border-radius: 999px;
 }
 
 .table-container::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: #b8c5d6;
 }
+
+/* Firefox */
+
+.table-container {
+  scrollbar-width: thin;
+  scrollbar-color: #d5dce6 #f8fafc;
+}
+
+/* =========================
+   Mobile
+   ========================= */
 
 @media (max-width: 768px) {
   .table-card {
     border-radius: 10px;
   }
+
   .custom-table {
     font-size: 12px;
   }
+
   .custom-table th,
   .custom-table td {
     padding: 10px 12px;
   }
+
+  .custom-table th {
+    font-size: 11px;
+  }
+
+  .col-index {
+    width: 44px;
+    min-width: 44px;
+  }
+
   .col-filename {
     min-width: 210px;
   }
+
   .pagination-bar {
     flex-direction: column;
-    gap: 8px;
     align-items: flex-start;
+    gap: 9px;
+    padding: 10px 12px;
   }
+
   .pagination-controls {
     width: 100%;
     justify-content: space-between;
+    gap: 12px;
   }
+
+  .page-size-selector {
+    flex-shrink: 0;
+  }
+
+  .page-buttons {
+    margin-left: auto;
+  }
+
   .empty-state {
     min-height: 260px;
     padding: 40px 20px;
+  }
+}
+
+@media (max-width: 400px) {
+  .pagination-controls {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .page-buttons {
+    margin-left: 0;
   }
 }
 </style>

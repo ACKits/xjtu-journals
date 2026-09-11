@@ -41,9 +41,30 @@
           </div>
         </header>
 
+        <div class="data-type-switch">
+          <button
+              :class="{ active: dataType === 'journal' }"
+              @click="switchDataType('journal')"
+          >
+            期刊
+          </button>
+          <button
+              :class="{ active: dataType === 'conference' }"
+              @click="switchDataType('conference')"
+          >
+            会议
+          </button>
+        </div>
+
         <section class="control-center">
           <div class="search-wrapper">
-            <SearchBar v-model="searchQuery" class="pro-search" placeholder="输入关键字检索 期刊/会议 是否被收录..." />
+            <SearchBar
+                v-model="searchQuery"
+                class="pro-search"
+                :placeholder="dataType === 'journal'
+                  ? '输入关键字检索期刊...'
+                  : '输入关键字检索会议...'"
+            />
           </div>
           <div class="filter-wrapper">
             <FileSelector
@@ -61,16 +82,15 @@
 
         <section class="status-bar">
           <div class="status-left">
-            <transition name="fade" mode="out-in">
-              <div v-if="isLoading" class="status-item loading-status">
-                <span class="spinner"></span>
-                <span>正在解析 {{ loadedCount }}/{{ totalFileCount }} 个文件</span>
-              </div>
-              <div v-else class="status-item">
-                <span class="status-dot"></span>
-                <span>{{ totalFiles }} 个文件 · {{ totalRecords.toLocaleString() }} 条记录</span>
-              </div>
-            </transition>
+            <div v-if="isLoading" class="status-item loading-status">
+              <span class="spinner"></span>
+              <span>正在解析 {{ loadedCount }}/{{ totalFileCount }} 个文件</span>
+            </div>
+
+            <div v-else class="status-item">
+              <span class="status-dot"></span>
+              <span>{{ totalFiles }} 个文件 · {{ totalRecords.toLocaleString() }} 条记录</span>
+            </div>
           </div>
           <transition name="fade">
             <div v-if="hasSearchQuery && !isLoading" class="result-count">
@@ -101,6 +121,34 @@
         </section>
       </main>
     </div>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <span class="footer-title">XJTU Journal Explorer</span>
+
+        <div class="footer-meta">
+          <div class="footer-badges">
+            <a
+                href="https://github.com/ACKits/xjtu-journals"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+              <img
+                  src="https://img.shields.io/badge/GitHub-ACKits-181717?style=flat&logo=github&logoColor=white"
+                  alt="GitHub"
+              />
+            </a>
+            <img
+                src="https://img.shields.io/badge/License-MIT-2563eb?style=flat"
+                alt="MIT License"
+            />
+            <img src="https://visitor-badge.laobi.icu/badge?page_id=ACKits.xjtu-journals&left_text=Visitors" alt="visitor badge"/>
+          </div>
+
+          <span class="footer-copy">© 2026 ACKits</span>
+        </div>
+      </div>
+    </footer>
 
     <transition name="fade-scale">
       <button
@@ -148,6 +196,7 @@ const isLoading = ref(false)
 const loadedCount = ref(0)
 const totalFileCount = ref(0)
 const showBackToTop = ref(false)
+const dataType = ref('journal')
 
 const hasSearchQuery = computed(() => Boolean(searchQuery.value?.trim()))
 
@@ -160,26 +209,56 @@ async function loadExcelFilesFromSrc() {
   loadedCount.value = 0
   totalFileCount.value = 0
 
+  // 强制让浏览器先绘制 loading 状态
+  await new Promise(resolve => setTimeout(resolve, 0))
+
   try {
-    const manifestRes = await fetch(`${import.meta.env.BASE_URL}excel/index.json`, { cache: 'no-store' })
+    const folder = dataType.value === 'journal'
+        ? 'journals'
+        : 'conferences'
+
+    const manifestRes = await fetch(
+        `${import.meta.env.BASE_URL}excel/${folder}/index.json`,
+        { cache: 'no-store' }
+    )
+
     if (!manifestRes.ok) throw new Error(`HTTP ${manifestRes.status}`)
 
     const manifest = await manifestRes.json()
-    const files = Array.isArray(manifest.files) ? manifest.files.filter(f => f && f.trim()) : []
+
+    const files = Array.isArray(manifest.files)
+        ? manifest.files.filter(f => f && f.trim())
+        : []
 
     totalFileCount.value = files.length
+
     if (!files.length) return
 
     for (const fileName of files) {
-      await sleep(20)
       try {
-        const res = await fetch(`${import.meta.env.BASE_URL}excel/${encodeURIComponent(fileName)}`)
+        const res = await fetch(
+            `${import.meta.env.BASE_URL}excel/${folder}/${encodeURIComponent(fileName)}`
+        )
+
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
         const buffer = await res.arrayBuffer()
-        const workbook = XLSX.read(buffer, { type: 'array', cellFormula: false, cellHTML: false, cellStyles: false })
+
+        const workbook = XLSX.read(buffer, {
+          type: 'array',
+          cellFormula: false,
+          cellHTML: false,
+          cellStyles: false
+        })
+
         const sheetName = workbook.SheetNames[0]
-        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' })
-        if (jsonData.length) addFileData(fileName, jsonData)
+
+        const jsonData = XLSX.utils.sheet_to_json(
+            workbook.Sheets[sheetName],
+            { defval: '' }
+        )
+
+        addFileData(fileName, jsonData)
       } catch (err) {
         console.error(`加载 ${fileName} 失败:`, err)
       } finally {
@@ -191,6 +270,14 @@ async function loadExcelFilesFromSrc() {
   } finally {
     isLoading.value = false
   }
+}
+
+async function switchDataType(type) {
+  if (type === dataType.value || isLoading.value) return
+
+  dataType.value = type
+  clearAllFiles()
+  await loadExcelFilesFromSrc()
 }
 
 function handleScroll() {
@@ -249,9 +336,8 @@ onUnmounted(() => {
 .app-container {
   width: 100%;
   max-width: 1280px;
-  min-height: 100vh;
   margin: 0 auto;
-  padding: 0 24px 48px;
+  padding: 0 24px;
 }
 .sticky-header-wrapper {
   position: sticky;
@@ -309,6 +395,54 @@ onUnmounted(() => {
   background: #fff;
   box-shadow: 0 1px 2px rgba(15,23,42,.03);
 }
+.data-type-switch {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 22px;
+  width: 100%;
+  height: 32px;
+  margin-bottom: 10px;
+}
+
+.data-type-switch button {
+  position: relative;
+  height: 32px;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: #8a94a3;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color .18s ease;
+}
+
+.data-type-switch button::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: transparent;
+  transition: background .18s ease;
+}
+
+.data-type-switch button:hover {
+  color: #475569;
+}
+
+.data-type-switch button.active {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.data-type-switch button.active::after {
+  background: #2563eb;
+}
+
 .search-wrapper {
   width: 100%;
   margin-bottom: 18px;
@@ -492,6 +626,75 @@ onUnmounted(() => {
   .back-to-top {
     right: 16px;
     bottom: 16px;
+  }
+}
+
+.site-footer {
+  width: 100%;
+  margin-top: 24px;
+}
+
+.footer-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 14px 24px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.footer-title {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.footer-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footer-badges {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.footer-badges img {
+  display: block;
+  height: 15px;
+  border-radius: 4px;
+}
+
+.footer-badges a {
+  display: block;
+  line-height: 0;
+  transition: opacity .18s ease;
+}
+
+.footer-badges a:hover {
+  opacity: .78;
+}
+
+.footer-copy {
+  color: #9aa3af;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .footer-meta {
+    width: auto;
+    justify-content: flex-start;
+    gap: 8px;
   }
 }
 </style>
