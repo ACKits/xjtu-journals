@@ -36,14 +36,14 @@
             </svg>
           </div>
           <div class="titles">
-            <h1>Excel Data Explorer</h1>
-            <p>快速检索与浏览 Excel 数据</p>
+            <h1>XJTU Journal Explorer</h1>
+            <p>快速查询期刊与会议收录情况</p>
           </div>
         </header>
 
         <section class="control-center">
           <div class="search-wrapper">
-            <SearchBar v-model="searchQuery" class="pro-search" placeholder="输入关键字搜索 Excel 数据..." />
+            <SearchBar v-model="searchQuery" class="pro-search" placeholder="输入关键字检索 期刊/会议 是否被收录..." />
           </div>
           <div class="filter-wrapper">
             <FileSelector
@@ -96,7 +96,7 @@
               </svg>
             </div>
             <h3>开始搜索</h3>
-            <p>输入关键词后，系统将从已加载的 Excel 文件中查找匹配记录。</p>
+            <p>输入关键词后，系统将从校定目录中查找匹配记录。</p>
           </div>
         </section>
       </main>

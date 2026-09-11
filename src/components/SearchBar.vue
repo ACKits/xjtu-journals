@@ -13,7 +13,7 @@
           type="text"
           :value="modelValue"
           @input="$emit('update:modelValue', $event.target.value)"
-          placeholder="输入关键词搜索 Excel 数据..."
+          placeholder="输入关键字检索 期刊/会议 是否被收录..."
       />
     </div>
   </div>

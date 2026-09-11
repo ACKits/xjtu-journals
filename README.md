@@ -1,48 +1,38 @@
-# excel-search
+# xjtu-journals
 
 [![Vue](https://img.shields.io/badge/Vue-3-42b883?logo=vue.js&logoColor=white)](https://vuejs.org/)
 [![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite&logoColor=white)](https://vite.dev/)
 [![SheetJS](https://img.shields.io/badge/SheetJS-0.18.5-217346)](https://sheetjs.com/)
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-222?logo=github&logoColor=white)](https://pf-z.github.io/excel-search/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-[中文文档](README.zh-CN.md)
-
-A web tool for searching across multiple Excel files.
-
-## Background
-
-In scenarios like research evaluation, journal catalogs, and subject classification, data is often split across multiple Excel files with identical structure but stored separately. Finding a specific record means opening each file and searching each sheet one by one — an inefficient process.
-
-This project merges those structurally identical Excel files into a single searchable table, preserving the source file of each record so you can search across all files from one interface.
+A web tool for quickly checking whether a journal or conference is included in the **2022 Edition of the Social Evaluation Journal Directory and Conference List for Doctoral Dissertation** of Xi'an Jiaotong University.
 
 ## Features
 
-* **Multi-file search** — Load multiple structurally identical Excel files and merge them into one table.
-* **Fuzzy search** — Match keywords across all columns without specifying a field.
-* **Filter by file** — Restrict the search to one or more selected files.
-* **Source tracking** — Each result shows its source file.
-* **Pure front-end** — Data is parsed entirely in the browser and never uploaded to a server.
+* **12 Built-in Directory Datasets** — Includes 12 Excel datasets from the directory, ready to use out of the box (conference list to be added later).
+* **Custom Upload** — Upload your own Excel files as needed. Files are processed entirely in your local browser and are never uploaded to any server.
+* **Fuzzy Search** — Match keywords across all columns without specifying a field.
+* **Filter by File** — Search within one or more selected files only.
+* **Source Labeling** — Each result shows its source file, making it easy to confirm where it comes from.
+* **Pure Frontend Processing** — No data is uploaded to a server; everything is parsed in the browser.
 
-## File Requirements
+## File Format Requirements
 
 * Supports `.xlsx` and `.xls` formats.
 * Column names must be in the **first row**.
 * Data must be in the **first worksheet**.
-* Column names should be **consistent** across files; otherwise, they will be treated as different fields.
-
-> `index.json` is only used in the development environment. The production build does not include any Excel data or the manifest file. See "Production Build" below.
+* The **column names of multiple files should be consistent**, otherwise they will be treated as different fields.
 
 ## Local Development
 
 ```bash
-git clone https://github.com/pf-z/excel-search.git
-cd excel-search
+git clone https://github.com/ACKits/xjtu-journals.git
+cd xjtu-journals
 npm install
 npm run dev
 ```
 
-In development mode, the tool automatically generates and reads `public/excel/index.json`, then loads the listed files.
+The tool automatically generates and reads `public/excel/index.json` and loads the files listed in it.
 
 ## Production Build
 
@@ -50,15 +40,20 @@ In development mode, the tool automatically generates and reads `public/excel/in
 npm run build
 ```
 
-The build output is placed in `dist/`.
+The build output goes to `dist/`.
 
-The production `dist/` does not include any Excel files or data, so it can be deployed publicly without exposing the source data.
+## Data Source
 
-The live demo is hosted on GitHub Pages and only demonstrates the interface and search capabilities, without any real data.
+* 2022 Edition of the Social Evaluation Journal Directory and Conference List for Doctoral Dissertation
+* Publisher: Graduate School of Xi'an Jiaotong University
+* Announcement: https://gs.xjtu.edu.cn/info/1148/8964.htm
+* Published: 2022-09-13
+
+> This tool only provides search functionality. The final interpretation of the directory belongs to the Graduate School of Xi'an Jiaotong University. Please refer to the latest official version. This project is not affiliated with or endorsed by the Graduate School of Xi'an Jiaotong University.
 
 ## Tech Stack
 
-* [Vue 3](https://vuejs.org/) — Front-end framework
+* [Vue 3](https://vuejs.org/) — Frontend framework
 * [Vite](https://vite.dev/) — Build tool
 * [SheetJS](https://sheetjs.com/) — Excel parsing
 

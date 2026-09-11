@@ -1,11 +1,11 @@
 {
-  "name": "excel-search",
+  "name": "xjtu-journals",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build --mode demo && rm -rf dist/excel",
+    "build": "vite build",
     "preview": "vite preview",
     "deploy": "gh-pages -d dist",
     "prebuild": "node scripts/generate-manifest.js",
