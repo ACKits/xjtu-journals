@@ -1,72 +1,176 @@
+<script setup>
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import SearchBar from './components/SearchBar.vue'
+import FileSelector from './components/FileSelector.vue'
+import ResultTable from './components/ResultTable.vue'
+import { useExcelSearch } from './composables/useExcelSearch.js'
+import * as XLSX from 'xlsx'
+import Header from "./components/Header.vue";
+
+const {
+  selectedFileNames,
+  searchQuery,
+  fileNames,
+  filteredData,
+  columns,
+  totalFiles,
+  totalRecords,
+  matchedCount,
+  addFileData,
+  clearAllFiles,
+  toggleFileSelection,
+  toggleSelectAll,
+  isAllSelected
+} = useExcelSearch()
+
+const isLoading = ref(false)
+const loadedCount = ref(0)
+const totalFileCount = ref(0)
+const showBackToTop = ref(false)
+const dataType = ref('journal')
+
+const hasSearchQuery = computed(() => Boolean(searchQuery.value?.trim()))
+
+/**
+ * 批量加载 Excel 文件
+ * 依次读取清单 index.json，再逐个拉取 Excel 并解析为 JSON
+ * @returns {Promise<void>}
+ */
+async function loadExcelFilesFromSrc() {
+  // 初始化 loading 状态
+  isLoading.value = true
+  loadedCount.value = 0
+  totalFileCount.value = 0
+
+  // 强制让浏览器先绘制 loading 状态
+  await new Promise(resolve => setTimeout(resolve, 0))
+
+  try {
+    // 根据 dataType 决定目录名
+    const folder = dataType.value === 'journal' ? 'journals' : 'conferences'
+
+    // 拉取文件清单 index.json
+    const manifestRes = await fetch(
+        `${import.meta.env.BASE_URL}excel/${folder}/index.json`,
+        { cache: 'no-store' }
+    )
+    if (!manifestRes.ok) throw new Error(`HTTP ${manifestRes.status}`)
+
+    // 解析清单，过滤出有效文件名
+    const manifest = await manifestRes.json()
+    const files = Array.isArray(manifest.files)
+        ? manifest.files.filter(f => f && f.trim())
+        : []
+    totalFileCount.value = files.length
+    if (!files.length) return
+
+    // 逐个加载并解析 Excel
+    for (const fileName of files) {
+      try {
+        const res = await fetch(
+            `${import.meta.env.BASE_URL}excel/${folder}/${encodeURIComponent(fileName)}`
+        )
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+        const buffer = await res.arrayBuffer()
+        const workbook = XLSX.read(buffer, {
+          type: 'array',
+          cellFormula: false,
+          cellHTML: false,
+          cellStyles: false
+        })
+        const sheetName = workbook.SheetNames[0]
+        const jsonData = XLSX.utils.sheet_to_json(
+            workbook.Sheets[sheetName],
+            { defval: '' }
+        )
+
+        addFileData(fileName, jsonData)
+      } catch (err) {
+        console.error(`加载 ${fileName} 失败:`, err)
+      } finally {
+        loadedCount.value++
+      }
+    }
+  } catch (err) {
+    console.error('加载文件清单失败:', err)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+/**
+ * 切换数据类型（期刊 / 会议），并重新加载对应的 Excel 文件
+ * 若目标类型与当前一致、或正在加载中，则直接返回，避免重复请求
+ * @param {'journal' | 'conference'} type - 目标数据类型
+ * @returns {Promise<void>}
+ */
+async function switchDataType(type) {
+  // 类型未变或正在加载中，直接返回
+  if (type === dataType.value || isLoading.value) return
+
+  dataType.value = type
+  clearAllFiles()
+  await loadExcelFilesFromSrc()
+}
+
+/**
+ * 监听滚动事件，超过 300px 时显示"回到顶部"按钮
+ */
+function handleScroll() {
+  showBackToTop.value = window.scrollY > 300
+}
+
+/**
+ * 平滑滚动回页面顶部
+ */
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+/**
+ * 文件加载完成后的回调，将每个文件的数据加入搜索列表
+ * @param {Array<{ fileName: string, data: any[] }>} loadedFiles - 已加载的文件列表
+ */
+function handleFilesLoaded(loadedFiles) {
+  for (const { fileName, data } of loadedFiles) addFileData(fileName, data)
+  // 上传后自动全选（如果需要，但这里保持原有行为：不强制全选，避免干扰用户选择）
+  // 若希望上传后也全选，可取消注释下一行
+  // if (fileNames.value.length > 0) selectedFileNames.value = fileNames.value.slice()
+}
+
+// 挂载时：加载 Excel 文件并监听页面滚动
+onMounted(() => {
+  loadExcelFilesFromSrc()
+  window.addEventListener('scroll', handleScroll, { passive: true })
+})
+
+// 卸载时：移除滚动监听，避免内存泄漏
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
+</script>
+
 <template>
   <div class="elegant-layout">
     <div class="app-container">
       <div class="sticky-header-wrapper">
-        <header class="app-header">
-          <div class="logo-wrapper">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
-              <defs>
-                <!-- 主体 Excel 绿色渐变 -->
-                <linearGradient id="excelGreen" x1="8" y1="8" x2="48" y2="56" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stop-color="#10B981" />
-                  <stop offset="100%" stop-color="#059669" />
-                </linearGradient>
-                <!-- 搜索蓝渐变 -->
-                <linearGradient id="searchBlue" x1="32" y1="32" x2="56" y2="56" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stop-color="#3B82F6" />
-                  <stop offset="100%" stop-color="#1D4ED8" />
-                </linearGradient>
-              </defs>
-              <!-- 1. 表格主体背景卡片 -->
-              <rect x="8" y="8" width="40" height="48" rx="8" fill="url(#excelGreen)" />
-              <!-- 2. 表格数据列（用白块和浅色透明块巧妙交织，代表数据表） -->
-              <!-- 顶部表头区块 -->
-              <rect x="15" y="16" width="12" height="5" rx="2" fill="#FFFFFF" />
-              <rect x="30" y="16" width="11" height="5" rx="2" fill="#FFFFFF" opacity="0.6" />
-              <!-- 数据行 1 -->
-              <rect x="15" y="25" width="26" height="4" rx="2" fill="#FFFFFF" opacity="0.4" />
-              <!-- 数据行 2 -->
-              <rect x="15" y="33" width="16" height="4" rx="2" fill="#FFFFFF" opacity="0.4" />
-              <!-- 数据行 3 -->
-              <rect x="15" y="41" width="10" height="4" rx="2" fill="#FFFFFF" opacity="0.4" />
-              <!-- 3. 右下角镂空叠加的精致放大镜 -->
-              <circle cx="41" cy="41" r="11" fill="#FFFFFF" />
-              <circle cx="41" cy="41" r="8" fill="url(#searchBlue)" />
-              <path d="M47 47 L55 55" stroke="url(#searchBlue)" stroke-width="4.5" stroke-linecap="round" />
-            </svg>
-          </div>
-          <div class="titles">
-            <h1>XJTU Journal Explorer</h1>
-            <p>快速查询期刊与会议收录情况</p>
-          </div>
-        </header>
+
+        <Header/>
 
         <div class="data-type-switch">
-          <button
-              :class="{ active: dataType === 'journal' }"
-              @click="switchDataType('journal')"
-          >
-            期刊
-          </button>
-          <button
-              :class="{ active: dataType === 'conference' }"
-              @click="switchDataType('conference')"
-          >
-            会议
-          </button>
+          <button :class="{ active: dataType === 'journal' }" @click="switchDataType('journal')"> 期刊 </button>
+          <button :class="{ active: dataType === 'conference' }" @click="switchDataType('conference')"> 会议 </button>
         </div>
 
         <section class="control-center">
           <div class="search-wrapper">
-            <SearchBar
-                v-model="searchQuery"
-                class="pro-search"
-                :placeholder="dataType === 'journal'
+            <SearchBar v-model="searchQuery" class="pro-search" :placeholder="dataType === 'journal'
                   ? '输入关键字检索期刊...'
                   : '输入关键字检索会议...'"
             />
           </div>
-          <div class="filter-wrapper">
+          <div>
             <FileSelector
                 :fileNames="fileNames"
                 :selectedFileNames="selectedFileNames"
@@ -102,12 +206,10 @@
 
       <main class="main-content">
         <section v-if="hasSearchQuery" class="data-viewport">
-          <div class="table-full-display">
-            <ResultTable :data="filteredData" :columns="columns" />
-          </div>
+          <ResultTable :data="filteredData" :columns="columns" />
         </section>
 
-        <section v-else class="data-viewport empty-search-placeholder">
+        <section v-else class="empty-search-placeholder">
           <div class="placeholder-content">
             <div class="search-icon-bag">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
@@ -115,8 +217,7 @@
                 <line x1="16.5" y1="16.5" x2="21" y2="21"></line>
               </svg>
             </div>
-            <h3>开始搜索</h3>
-            <p>输入关键词后，系统将从校定目录中查找匹配记录。</p>
+            <p>输入关键词后，系统将从目录中查找匹配记录。</p>
           </div>
         </section>
       </main>
@@ -128,20 +229,10 @@
 
         <div class="footer-meta">
           <div class="footer-badges">
-            <a
-                href="https://github.com/ACKits/xjtu-journals"
-                target="_blank"
-                rel="noopener noreferrer"
-            >
-              <img
-                  src="https://img.shields.io/badge/GitHub-ACKits-181717?style=flat&logo=github&logoColor=white"
-                  alt="GitHub"
-              />
+            <a href="https://github.com/ACKits/xjtu-journals" target="_blank" rel="noopener noreferrer" >
+              <img src="https://img.shields.io/badge/GitHub-ACKits-181717?style=flat&logo=github&logoColor=white" alt="GitHub" />
             </a>
-            <img
-                src="https://img.shields.io/badge/License-MIT-2563eb?style=flat"
-                alt="MIT License"
-            />
+            <img src="https://img.shields.io/badge/License-MIT-2563eb?style=flat" alt="MIT License" />
             <img src="https://visitor-badge.laobi.icu/badge?page_id=ACKits.xjtu-journals&left_text=Visitors" alt="visitor badge"/>
           </div>
 
@@ -151,13 +242,7 @@
     </footer>
 
     <transition name="fade-scale">
-      <button
-          v-if="showBackToTop"
-          class="back-to-top"
-          @click="scrollToTop"
-          aria-label="返回顶部"
-          title="返回顶部"
-      >
+      <button v-if="showBackToTop" class="back-to-top" @click="scrollToTop" aria-label="返回顶部" title="返回顶部">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <path d="M12 19V5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
           <path d="M6 11L12 5L18 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -166,144 +251,6 @@
     </transition>
   </div>
 </template>
-
-<script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import SearchBar from './components/SearchBar.vue'
-import FileSelector from './components/FileSelector.vue'
-import ResultTable from './components/ResultTable.vue'
-import { useExcelSearch } from './composables/useExcelSearch.js'
-import * as XLSX from 'xlsx'
-
-const {
-  fileDataList,
-  selectedFileNames,
-  searchQuery,
-  fileNames,
-  filteredData,
-  columns,
-  totalFiles,
-  totalRecords,
-  matchedCount,
-  addFileData,
-  clearAllFiles,
-  toggleFileSelection,
-  toggleSelectAll,
-  isAllSelected
-} = useExcelSearch()
-
-const isLoading = ref(false)
-const loadedCount = ref(0)
-const totalFileCount = ref(0)
-const showBackToTop = ref(false)
-const dataType = ref('journal')
-
-const hasSearchQuery = computed(() => Boolean(searchQuery.value?.trim()))
-
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
-
-async function loadExcelFilesFromSrc() {
-  if (import.meta.env.MODE === 'demo') return
-
-  isLoading.value = true
-  loadedCount.value = 0
-  totalFileCount.value = 0
-
-  // 强制让浏览器先绘制 loading 状态
-  await new Promise(resolve => setTimeout(resolve, 0))
-
-  try {
-    const folder = dataType.value === 'journal'
-        ? 'journals'
-        : 'conferences'
-
-    const manifestRes = await fetch(
-        `${import.meta.env.BASE_URL}excel/${folder}/index.json`,
-        { cache: 'no-store' }
-    )
-
-    if (!manifestRes.ok) throw new Error(`HTTP ${manifestRes.status}`)
-
-    const manifest = await manifestRes.json()
-
-    const files = Array.isArray(manifest.files)
-        ? manifest.files.filter(f => f && f.trim())
-        : []
-
-    totalFileCount.value = files.length
-
-    if (!files.length) return
-
-    for (const fileName of files) {
-      try {
-        const res = await fetch(
-            `${import.meta.env.BASE_URL}excel/${folder}/${encodeURIComponent(fileName)}`
-        )
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
-        const buffer = await res.arrayBuffer()
-
-        const workbook = XLSX.read(buffer, {
-          type: 'array',
-          cellFormula: false,
-          cellHTML: false,
-          cellStyles: false
-        })
-
-        const sheetName = workbook.SheetNames[0]
-
-        const jsonData = XLSX.utils.sheet_to_json(
-            workbook.Sheets[sheetName],
-            { defval: '' }
-        )
-
-        addFileData(fileName, jsonData)
-      } catch (err) {
-        console.error(`加载 ${fileName} 失败:`, err)
-      } finally {
-        loadedCount.value++
-      }
-    }
-  } catch (err) {
-    console.error('加载文件清单失败:', err)
-  } finally {
-    isLoading.value = false
-  }
-}
-
-async function switchDataType(type) {
-  if (type === dataType.value || isLoading.value) return
-
-  dataType.value = type
-  clearAllFiles()
-  await loadExcelFilesFromSrc()
-}
-
-function handleScroll() {
-  showBackToTop.value = window.scrollY > 300
-}
-
-function scrollToTop() {
-  window.scrollTo({ top: 0, behavior: 'smooth' })
-}
-
-function handleFilesLoaded(loadedFiles) {
-  for (const { fileName, data } of loadedFiles) addFileData(fileName, data)
-  // 上传后自动全选（如果需要，但这里保持原有行为：不强制全选，避免干扰用户选择）
-  // 若希望上传后也全选，可取消注释下一行
-  // if (fileNames.value.length > 0) selectedFileNames.value = fileNames.value.slice()
-}
-
-onMounted(() => {
-  loadExcelFilesFromSrc()
-  window.addEventListener('scroll', handleScroll, { passive: true })
-})
-
-onUnmounted(() => {
-  window.removeEventListener('scroll', handleScroll)
-})
-</script>
 
 <style scoped>
 :global(*) {
@@ -326,19 +273,21 @@ onUnmounted(() => {
 :global(input) {
   font: inherit;
 }
+
 .elegant-layout {
   width: 100%;
   min-height: 100vh;
   background: #fff;
-  color: #1f2937;
   overflow-x: clip;
 }
+
 .app-container {
   width: 100%;
   max-width: 1280px;
   margin: 0 auto;
   padding: 0 24px;
 }
+
 .sticky-header-wrapper {
   position: sticky;
   top: 0;
@@ -346,65 +295,24 @@ onUnmounted(() => {
   width: 100%;
   padding: 20px 0 14px;
   background: rgba(255,255,255,.97);
-  border-bottom: 1px solid #eef0f3;
 }
-.app-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-.logo-wrapper {
-  width: 38px;
-  height: 38px;
-  flex: 0 0 38px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 0px solid #e5e7eb;
-  border-radius: 10px;
-  background: #f8fafc;
-  color: #334155;
-}
-.logo {
-  width: 19px;
-  height: 19px;
-}
-.titles {
-  min-width: 0;
-}
-.titles h1 {
-  margin: 0;
-  font-size: 20px;
-  line-height: 1.3;
-  font-weight: 700;
-  letter-spacing: -.025em;
-  color: #111827;
-}
-.titles p {
-  margin: 3px 0 0;
-  font-size: 13px;
-  line-height: 1.4;
-  color: #8a94a3;
-}
+
 .control-center {
-  width: 100%;
   padding: 16px 18px;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   background: #fff;
   box-shadow: 0 1px 2px rgba(15,23,42,.03);
 }
+
 .data-type-switch {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 22px;
-  width: 100%;
   height: 32px;
   margin-bottom: 10px;
 }
-
 .data-type-switch button {
   position: relative;
   height: 32px;
@@ -412,12 +320,11 @@ onUnmounted(() => {
   border: 0;
   background: transparent;
   color: #8a94a3;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   font-weight: 500;
   cursor: pointer;
   transition: color .18s ease;
 }
-
 .data-type-switch button::after {
   content: "";
   position: absolute;
@@ -429,28 +336,21 @@ onUnmounted(() => {
   background: transparent;
   transition: background .18s ease;
 }
-
 .data-type-switch button:hover {
   color: #475569;
 }
-
 .data-type-switch button.active {
   color: #2563eb;
   font-weight: 600;
 }
-
 .data-type-switch button.active::after {
   background: #2563eb;
 }
 
 .search-wrapper {
-  width: 100%;
   margin-bottom: 18px;
 }
 
-.filter-wrapper {
-  width: 100%;
-}
 .status-bar {
   min-height: 30px;
   display: flex;
@@ -463,7 +363,7 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   color: #8a94a3;
 }
@@ -484,21 +384,19 @@ onUnmounted(() => {
   border-radius: 50%;
   animation: spin .7s linear infinite;
 }
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 .result-count {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: #2563eb;
 }
+
 .main-content {
-  width: 100%;
   padding-top: 20px;
 }
-.data-viewport {
-  width: 100%;
-}
-.table-full-display {
-  width: 100%;
-}
+
 .empty-search-placeholder {
   min-height: 360px;
   display: flex;
@@ -510,7 +408,6 @@ onUnmounted(() => {
   background: #fff;
 }
 .placeholder-content {
-  width: 100%;
   max-width: 400px;
   display: flex;
   flex-direction: column;
@@ -533,19 +430,13 @@ onUnmounted(() => {
   width: 25px;
   height: 25px;
 }
-.placeholder-content h3 {
-  margin: 0 0 7px;
-  font-size: 16px;
-  line-height: 1.4;
-  font-weight: 650;
-  color: #1f2937;
-}
 .placeholder-content p {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   line-height: 1.7;
   color: #8a94a3;
 }
+
 .back-to-top {
   position: fixed;
   right: 24px;
@@ -579,38 +470,13 @@ onUnmounted(() => {
 .back-to-top:active {
   transform: translateY(0);
 }
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity .16s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-.fade-scale-enter-active,
-.fade-scale-leave-active {
-  transition: opacity .18s ease, transform .18s ease;
-}
-.fade-scale-enter-from,
-.fade-scale-leave-to {
-  opacity: 0;
-  transform: translateY(6px) scale(.96);
-}
+
 @media (max-width: 768px) {
   .app-container {
     padding: 0 16px 36px;
   }
   .sticky-header-wrapper {
     padding-top: 14px;
-  }
-  .app-header {
-    margin-bottom: 14px;
-  }
-  .titles h1 {
-    font-size: 18px;
   }
   .control-center {
     padding: 14px;
@@ -633,7 +499,6 @@ onUnmounted(() => {
   width: 100%;
   margin-top: 24px;
 }
-
 .footer-inner {
   max-width: 1280px;
   margin: 0 auto;
@@ -643,46 +508,38 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 24px;
 }
-
 .footer-title {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: #6b7280;
 }
-
 .footer-meta {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-
 .footer-badges {
   display: flex;
   align-items: center;
   gap: 5px;
 }
-
 .footer-badges img {
   display: block;
   height: 15px;
   border-radius: 4px;
 }
-
 .footer-badges a {
   display: block;
   line-height: 0;
   transition: opacity .18s ease;
 }
-
 .footer-badges a:hover {
   opacity: .78;
 }
-
 .footer-copy {
   color: #9aa3af;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   white-space: nowrap;
 }
-
 @media (max-width: 640px) {
   .footer-inner {
     flex-direction: column;

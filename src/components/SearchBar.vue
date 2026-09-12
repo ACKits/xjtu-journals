@@ -1,3 +1,18 @@
+<script setup>
+defineProps({
+  modelValue: {
+    type: String,
+    default: ''
+  },
+  placeholder: {
+    type: String,
+    default: '输入关键字检索...'
+  }
+})
+defineEmits(['update:modelValue'])
+</script>
+
+
 <template>
   <div class="search-bar-wrap">
     <div class="section-label">
@@ -19,20 +34,6 @@
   </div>
 </template>
 
-<script setup>
-defineProps({
-  modelValue: {
-    type: String,
-    default: ''
-  },
-  placeholder: {
-    type: String,
-    default: '输入关键字检索...'
-  }
-})
-defineEmits(['update:modelValue'])
-</script>
-
 <style scoped>
 .search-bar-wrap {
   flex: 2 1 280px;
@@ -44,7 +45,7 @@ defineEmits(['update:modelValue'])
   gap: 7px;
   margin-bottom: 7px;
   color: #475569;
-  font-size: 12px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   line-height: 1.4;
 }
@@ -67,7 +68,7 @@ defineEmits(['update:modelValue'])
   box-sizing: border-box;
   background: #fff;
   color: #374151;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   line-height: 1;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }

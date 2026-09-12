@@ -1,107 +1,62 @@
-<template>
-  <div class="file-selector-wrap">
-    <div class="selector-header">
-      <div class="selector-title">
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h4l2 2h7A2.5 2.5 0 0 1 20 9.5v8A2.5 2.5 0 0 1 17.5 20h-11A2.5 2.5 0 0 1 4 17.5v-10Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
-        </svg>
-        <span>数据来源</span>
-      </div>
-      <span class="selection-count">{{ selectedCount }}/{{ fileNames.length }}</span>
-    </div>
-    <div ref="dropdownRef" class="dropdown">
-      <button type="button" class="dropdown-trigger" :class="{ active: dropdownOpen }" :disabled="disabled" @click="toggleDropdown">
-        <span class="trigger-text" :title="selectedLabel">{{ disabled ? '加载中…' : selectedLabel }}</span>
-        <svg class="chevron" :class="{ rotated: dropdownOpen }" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="m7 10 5 5 5-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
-      <transition name="dropdown">
-        <div v-if="dropdownOpen && !disabled" class="dropdown-menu">
-          <button type="button" class="option all-option" :class="{ selected: isAllSelected }" @click="toggleAll">
-            <span class="check-box" :class="{ checked: isAllSelected }">
-              <svg v-if="isAllSelected" viewBox="0 0 24 24" fill="none">
-                <path d="m6.5 12.5 3.5 3.5 3.5 3.5 7-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>
-            <span class="option-content">
-              <span class="option-title">全部文件</span>
-              <span class="option-meta">{{ fileNames.length }} 个文件</span>
-            </span>
-          </button>
-          <div class="menu-divider"></div>
-          <div class="file-list">
-            <button v-for="fileName in fileNames" :key="fileName" type="button" class="option file-option" :class="{ selected: isFileSelected(fileName) }" @click="toggleFile(fileName)">
-              <span class="check-box" :class="{ checked: isFileSelected(fileName) }">
-                <svg v-if="isFileSelected(fileName)" viewBox="0 0 24 24" fill="none">
-                  <path d="m5.5 12.5 4 4 9-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </span>
-              <span class="file-icon">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M6 3.5h8l4 4v13H6a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-                  <path d="M14 3.5v4h4M8 12h8M8 15.5h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-              </span>
-              <span class="file-name" :title="fileName">{{ fileName }}</span>
-            </button>
-            <div v-if="!fileNames.length" class="empty-files">暂无可用文件</div>
-          </div>
-        </div>
-      </transition>
-    </div>
+<!--
+  受控组件（controlled component），遵循 props 进、事件出 的模式
 
-    <div class="quick-section">
-      <div class="quick-header">
-        <span>快速选择</span>
-        <button type="button" class="select-all-btn" :disabled="disabled" @click="toggleAll">{{ isAllSelected ? '取消全选' : '全选' }}</button>
-      </div>
-      <div class="quick-list">
-        <button v-for="fileName in fileNames" :key="fileName" type="button" class="quick-item" :class="{ active: isFileSelected(fileName) }" :disabled="disabled" @click="toggleFile(fileName)">
-          <span class="quick-check">
-            <svg v-if="isFileSelected(fileName)" viewBox="0 0 24 24" fill="none">
-              <path d="m5.5 12.5 4 4 9-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </span>
-          <span class="quick-name" :title="fileName">{{ fileName }}</span>
-        </button>
-      </div>
-    </div>
+  父组件 ──props──► 子组件
+  父组件 ◄──emit── 子组件
 
-    <div class="upload-area">
-      <label for="fileUpload" class="upload-btn" :class="{ disabled }" :style="disabled ? 'pointer-events: none; opacity: 0.6;' : ''">
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M12 16V4M7.5 8.5 12 4l4.5 4.5M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <span>加载 Excel 文件</span>
-      </label>
-      <input id="fileUpload" type="file" multiple accept=".xlsx,.xls" :disabled="disabled" @change="onFileUpload">
-      <span class="upload-hint">支持 .xlsx / .xls</span>
-    </div>
-  </div>
-</template>
+  数据来源：fileNames、selectedFileNames、isAllSelected 全部由父组件传入。
+  状态变更：子组件不直接改 props，而是 emit 事件让父组件去改。
+  本地状态：只有 dropdownOpen（下拉展开）和 dropdownRef（DOM 引用）是组件内部的。
+-->
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { readExcelFile } from '../utils/excel.js'
+
+/**
+ * 组件 props
+ * @property {string[]} fileNames - 所有可选文件名
+ * @property {string[]|null} selectedFileNames - 已选文件名（null 表示全选）
+ * @property {boolean} isAllSelected - 是否处于全选状态
+ * @property {boolean} disabled - 是否禁用交互
+ */
 const props = defineProps({
   fileNames: { type: Array, required: true },
   selectedFileNames: { required: true },
   isAllSelected: { type: Boolean, required: true },
   disabled: { type: Boolean, default: false }
 })
+
+/**
+ * 组件事件
+ * - update:selectedFileNames：同步选中列表（配合 v-model）
+ * - toggleAll：请求全选/取消全选
+ * - toggleFile：请求切换单个文件
+ * - filesLoaded：上传并解析完成后，把数据抛给父组件
+ */
 const emit = defineEmits([
   'update:selectedFileNames',
   'toggleAll',
   'toggleFile',
   'filesLoaded'
 ])
+
+// 下拉面板是否展开
 const dropdownOpen = ref(false)
+// 下拉面板根元素引用，用于判断点击是否在外部
 const dropdownRef = ref(null)
+
+/**
+ * 已选文件数量
+ * selectedFileNames 为 null 时代表全选，数量 = 总文件数
+ */
 const selectedCount = computed(() => {
-  return props.selectedFileNames === null
-      ? props.fileNames.length
-      : props.selectedFileNames.length
+  return props.selectedFileNames === null ? props.fileNames.length : props.selectedFileNames.length
 })
+
+/**
+ * 下拉框上显示的文案
+ * 根据选中状态动态返回不同的提示文字
+ */
 const selectedLabel = computed(() => {
   const total = props.fileNames.length
   const selected = props.selectedFileNames
@@ -117,21 +72,46 @@ const selectedLabel = computed(() => {
   }
   return `已选择 ${selected.length} 个文件`
 })
+
+/**
+ * 判断某个文件是否被选中
+ * selectedFileNames 为 null 视为全选
+ * @param {string} fileName
+ * @returns {boolean}
+ */
 function isFileSelected(fileName) {
   return props.selectedFileNames === null || props.selectedFileNames.includes(fileName)
 }
+
+/**
+ * 切换下拉面板展开/收起
+ */
 function toggleDropdown() {
   if (props.disabled) return
   dropdownOpen.value = !dropdownOpen.value
 }
+
+/**
+ * 切换单个文件的选中状态（向上抛事件，由父组件处理）
+ * @param {string} file
+ */
 function toggleFile(file) {
   if (props.disabled) return
   emit('toggleFile', file)
 }
+
+/**
+ * 全选 / 取消全选（向上抛事件）
+ */
 function toggleAll() {
   if (props.disabled) return
   emit('toggleAll')
 }
+
+/**
+ * 处理文件上传：逐个读取 Excel，解析成功后统一抛给父组件
+ * @param {Event} e - input 的 change 事件
+ */
 async function onFileUpload(e) {
   if (props.disabled) return
   const files = e.target.files
@@ -147,24 +127,114 @@ async function onFileUpload(e) {
     }
   }
   if (loaded.length) emit('filesLoaded', loaded)
+
+  // 清空 input 的值，保证同一个文件再次选择也能触发 change
   e.target.value = ''
 }
+
+/**
+ * 点击外部时关闭下拉面板
+ * @param {MouseEvent} e
+ */
 function handleOutsideClick(e) {
   if (dropdownRef.value && !dropdownRef.value.contains(e.target)) {
     dropdownOpen.value = false
   }
 }
+
+// 挂载时监听全局点击，用于点击外部关闭下拉
 onMounted(() => {
   document.addEventListener('click', handleOutsideClick)
 })
+
+// 卸载时移除监听，避免内存泄漏
 onUnmounted(() => {
   document.removeEventListener('click', handleOutsideClick)
 })
 </script>
+
+<template>
+  <div class="selector-header">
+    <div class="selector-title">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h4l2 2h7A2.5 2.5 0 0 1 20 9.5v8A2.5 2.5 0 0 1 17.5 20h-11A2.5 2.5 0 0 1 4 17.5v-10Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+      </svg>
+      <span>数据来源</span>
+    </div>
+    <span class="selection-count">{{ selectedCount }}/{{ fileNames.length }}</span>
+  </div>
+  <div ref="dropdownRef" class="dropdown">
+    <button type="button" class="dropdown-trigger" :class="{ active: dropdownOpen }" :disabled="disabled" @click="toggleDropdown">
+      <span class="trigger-text" :title="selectedLabel">{{ disabled ? '加载中…' : selectedLabel }}</span>
+      <svg class="chevron" :class="{ rotated: dropdownOpen }" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="m7 10 5 5 5-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <transition class="dropdown">
+      <div v-if="dropdownOpen && !disabled" class="dropdown-menu">
+        <button type="button" class="option all-option" :class="{ selected: isAllSelected }" @click="toggleAll">
+            <span class="check-box" :class="{ checked: isAllSelected }">
+              <svg v-if="isAllSelected" viewBox="0 0 24 24" fill="none">
+                <path d="m6.5 12.5 3.5 3.5 3.5 3.5 7-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          <span class="option-content">
+              <span class="option-title">全部文件</span>
+              <span class="option-meta">{{ fileNames.length }} 个文件</span>
+            </span>
+        </button>
+        <div class="menu-divider"></div>
+        <div class="file-list">
+          <button v-for="fileName in fileNames" :key="fileName" type="button" class="option file-option" :class="{ selected: isFileSelected(fileName) }" @click="toggleFile(fileName)">
+              <span class="check-box" :class="{ checked: isFileSelected(fileName) }">
+                <svg v-if="isFileSelected(fileName)" viewBox="0 0 24 24" fill="none">
+                  <path d="m5.5 12.5 4 4 9-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+            <span class="file-icon">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M6 3.5h8l4 4v13H6a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                  <path d="M14 3.5v4h4M8 12h8M8 15.5h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+              </span>
+            <span class="file-name" :title="fileName">{{ fileName }}</span>
+          </button>
+          <div v-if="!fileNames.length" class="empty-files">暂无可用文件</div>
+        </div>
+      </div>
+    </transition>
+  </div>
+
+  <div class="quick-section">
+    <div class="quick-header">
+      <span>快速选择</span>
+      <button type="button" class="select-all-btn" :disabled="disabled" @click="toggleAll">{{ isAllSelected ? '取消全选' : '全选' }}</button>
+    </div>
+    <div class="quick-list">
+      <button v-for="fileName in fileNames" :key="fileName" type="button" class="quick-item" :class="{ active: isFileSelected(fileName) }" :disabled="disabled" @click="toggleFile(fileName)">
+          <span class="quick-check">
+            <svg v-if="isFileSelected(fileName)" viewBox="0 0 24 24" fill="none">
+              <path d="m5.5 12.5 4 4 9-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+        <span class="quick-name" :title="fileName">{{ fileName }}</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="upload-area">
+    <label for="fileUpload" class="upload-btn" :class="{ disabled }" :style="disabled ? 'pointer-events: none; opacity: 0.6;' : ''">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 16V4M7.5 8.5 12 4l4.5 4.5M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>加载 Excel 文件</span>
+    </label>
+    <input id="fileUpload" type="file" multiple accept=".xlsx,.xls" :disabled="disabled" @change="onFileUpload">
+    <span class="upload-hint">支持 .xlsx / .xls</span>
+  </div>
+</template>
+
 <style scoped>
-.file-selector-wrap {
-  width: 100%;
-}
 .selector-header {
   display: flex;
   align-items: center;
@@ -176,7 +246,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 7px;
   color: #475569;
-  font-size: 12px;
+  font-size: var(--font-size-base);
   font-weight: 600;
 }
 .selector-title svg {
@@ -185,10 +255,11 @@ onUnmounted(() => {
   color: #64748b;
 }
 .selection-count {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: #94a3b8;
   font-variant-numeric: tabular-nums;
 }
+
 .dropdown {
   position: relative;
   width: 100%;
@@ -206,8 +277,7 @@ onUnmounted(() => {
   outline: none;
   background: #fff;
   color: #334155;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--font-size-base);
   text-align: left;
   cursor: pointer;
   transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
@@ -222,7 +292,7 @@ onUnmounted(() => {
 }
 .trigger-text {
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--font-size-base);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -284,16 +354,16 @@ onUnmounted(() => {
   gap: 2px;
 }
 .option-title {
-  font-size: 13px;
+  font-size: var(--font-size-base);
   line-height: 1.4;
-  font-weight: 550;
   color: #334155;
 }
 .option-meta {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   line-height: 1.3;
   color: #94a3b8;
 }
+
 .check-box {
   width: 17px;
   height: 17px;
@@ -334,7 +404,7 @@ onUnmounted(() => {
 .file-name {
   min-width: 0;
   overflow: hidden;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   line-height: 1.4;
   color: #475569;
   text-overflow: ellipsis;
@@ -342,8 +412,7 @@ onUnmounted(() => {
 }
 .file-option.selected .file-name {
   color: #1e293b;
-  font-weight: 500;
-  font-size: 12px;
+  font-size: var(--font-size-base);
 }
 .menu-divider {
   height: 1px;
@@ -373,86 +442,10 @@ onUnmounted(() => {
 .empty-files {
   padding: 24px 12px;
   color: #94a3b8;
-  font-size: 12px;
+  font-size: var(--font-size-base);
   text-align: center;
 }
-.selected-files {
-  margin-top: 13px;
-  padding: 11px 12px 12px;
-  border: 1px solid #eef0f3;
-  border-radius: 9px;
-  background: #fafbfc;
-}
-.selected-files-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 9px;
-  color: #64748b;
-  font-size: 11px;
-  font-weight: 600;
-}
-.clear-selection {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #94a3b8;
-  font-size: 11px;
-  cursor: pointer;
-  transition: color .14s ease;
-}
-.clear-selection:hover {
-  color: #2563eb;
-}
-.selected-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-.file-tag {
-  max-width: 100%;
-  min-height: 28px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 7px 4px 10px;
-  border: 1px solid #e2e8f0;
-  border-radius: 7px;
-  background: #fff;
-  color: #475569;
-  font-size: 11px;
-  font-weight: 500;
-}
-.tag-name {
-  min-width: 0;
-  max-width: 240px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.remove {
-  width: 17px;
-  height: 17px;
-  flex: 0 0 17px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: #94a3b8;
-  cursor: pointer;
-  transition: color .14s ease, background .14s ease;
-}
-.remove svg {
-  width: 13px;
-  height: 13px;
-}
-.remove:hover {
-  background: #f1f5f9;
-  color: #475569;
-}
+
 .quick-section {
   margin-top: 18px;
 }
@@ -462,16 +455,16 @@ onUnmounted(() => {
   justify-content: space-between;
   margin-bottom: 7px;
   color: #94a3b8;
-  font-size: 11px;
-  font-weight: 500;
+  font-size: var(--font-size-xs);
+  font-weight: 550;
 }
 .select-all-btn {
   padding: 0;
   border: 0;
   background: transparent;
   color: #2563eb;
-  font-size: 11px;
-  font-weight: 500;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
   cursor: pointer;
 }
 .select-all-btn:hover {
@@ -481,7 +474,7 @@ onUnmounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  max-height: 118px;
+  max-height: 105px;
   overflow-y: auto;
   padding: 1px 1px 2px;
 
@@ -567,7 +560,7 @@ onUnmounted(() => {
   min-width: 0;
   max-width: 220px;
   overflow: hidden;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -593,8 +586,8 @@ onUnmounted(() => {
   border-radius: 7px;
   background: #fff;
   color: #475569;
-  font-size: 11px;
-  font-weight: 550;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
   cursor: pointer;
   transition: border-color .14s ease, background .14s ease, color .14s ease;
 }
@@ -609,18 +602,9 @@ onUnmounted(() => {
 }
 .upload-hint {
   color: #a0a9b5;
-  font-size: 10px;
+  font-size: var(--font-size-xs);
 }
-.dropdown-enter-active,
-.dropdown-leave-active {
-  transition: opacity .14s ease, transform .14s ease;
-  transform-origin: top center;
-}
-.dropdown-enter-from,
-.dropdown-leave-to {
-  opacity: 0;
-  transform: translateY(-4px) scale(.985);
-}
+
 @media (max-width: 768px) {
   .file-list {
     max-height: 220px;
@@ -628,7 +612,6 @@ onUnmounted(() => {
   .quick-list {
     max-height: 100px;
   }
-  .tag-name,
   .quick-name {
     max-width: 180px;
   }
@@ -636,11 +619,6 @@ onUnmounted(() => {
 .dropdown-trigger:disabled,
 .quick-item:disabled,
 .select-all-btn:disabled,
-.clear-selection:disabled,
-.remove:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
 .dropdown-trigger:disabled:hover {
   border-color: #e2e8f0;
   background: #fff;

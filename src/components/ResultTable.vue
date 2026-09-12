@@ -1,3 +1,77 @@
+<script setup>
+import { ref, computed, watch } from 'vue'
+
+/**
+ * 组件 props
+ * @property {Array} data - 表格数据源（必填）
+ * @property {Array} columns - 列定义（必填）
+ */
+const props = defineProps({
+  data: {
+    type: Array,
+    required: true,
+    default: () => []
+  },
+  columns: {
+    type: Array,
+    required: true,
+    default: () => []
+  }
+})
+
+// 分页状态
+const currentPage = ref(1)
+const pageSize = ref(20) // 默认每页 20 条
+
+/**
+ * 计算总页数
+ * 数据为空时返回 1，避免出现 0 页
+ */
+const totalPages = computed(() => {
+  if (!props.data || props.data.length === 0) return 1
+  return Math.ceil(props.data.length / pageSize.value)
+})
+
+/**
+ * 监听数据源或每页条数变化，重置回第一页
+ * 避免切换后停留在超出范围的页码上
+ */
+watch([() => props.data, pageSize], () => {
+  currentPage.value = 1
+})
+
+/**
+ * 当前页的数据切片
+ */
+const paginatedData = computed(() => {
+  if (!props.data) return []
+  const start = (currentPage.value - 1) * pageSize.value
+  return props.data.slice(start, start + pageSize.value)
+})
+
+/**
+ * 获取行数据对应的来源文件名（兼容多种字段命名）
+ * @param {Object} row - 行数据
+ * @returns {string} 来源文件名，找不到时返回"未知文件"
+ */
+function getSourceFile(row) {
+  if (!row) return '未知文件'
+  return row._sourceFile || row.fileName || row._fileName || row['来源文件'] || '未知文件'
+}
+
+/**
+ * 格式化单元格显示值，空值统一显示为 "-"
+ * @param {*} value - 原始值
+ * @returns {string}
+ */
+function formatCellValue(value) {
+  if (value === undefined || value === null || value === '') {
+    return '-'
+  }
+  return String(value)
+}
+</script>
+
 <template>
   <div class="result-table-wrapper">
     <div v-if="data && data.length" class="table-card">
@@ -107,57 +181,6 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, watch } from 'vue'
-
-const props = defineProps({
-  data: {
-    type: Array,
-    required: true,
-    default: () => []
-  },
-  columns: {
-    type: Array,
-    required: true,
-    default: () => []
-  }
-})
-
-// 分页状态
-const currentPage = ref(1)
-const pageSize = ref(20) // 默认每页 20 条
-
-// 计算总页数
-const totalPages = computed(() => {
-  if (!props.data || props.data.length === 0) return 1
-  return Math.ceil(props.data.length / pageSize.value)
-})
-
-// 监听数据源或每页条数变化，重置到第一页
-watch([() => props.data, pageSize], () => {
-  currentPage.value = 1
-})
-
-// 过滤出当前页展示的数据切片
-const paginatedData = computed(() => {
-  if (!props.data) return []
-  const start = (currentPage.value - 1) * pageSize.value
-  return props.data.slice(start, start + pageSize.value)
-})
-
-function getSourceFile(row) {
-  if (!row) return '未知文件'
-  return row._sourceFile || row.fileName || row._fileName || row['来源文件'] || '未知文件'
-}
-
-function formatCellValue(value) {
-  if (value === undefined || value === null || value === '') {
-    return '-'
-  }
-  return String(value)
-}
-</script>
-
 <style scoped>
 .result-table-wrapper {
   width: 100%;
@@ -198,7 +221,7 @@ function formatCellValue(value) {
   border-collapse: separate;
   border-spacing: 0;
   table-layout: auto;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   color: #374151;
 }
 
@@ -220,7 +243,7 @@ function formatCellValue(value) {
   z-index: 2;
   background: #f7f9fc;
   color: #64748b;
-  font-size: 11px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   letter-spacing: .01em;
   border-bottom: 1px solid #e8edf3;
@@ -256,7 +279,7 @@ function formatCellValue(value) {
   min-width: 48px;
   text-align: center !important;
   color: #a8b0bc !important;
-  font-size: 11px !important;
+  font-size: var(--font-size-sm) !important;
   font-weight: 500 !important;
 }
 
@@ -288,7 +311,7 @@ function formatCellValue(value) {
   min-width: 0;
   overflow: hidden;
   color: #7b8796;
-  font-size: 12px;
+  font-size: var(--font-size-base);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -304,7 +327,7 @@ function formatCellValue(value) {
   padding: 10px 14px;
   background: #fff;
   border-top: 1px solid #eef1f5;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: #8a94a3;
   flex-shrink: 0;
 }
@@ -342,7 +365,7 @@ function formatCellValue(value) {
   outline: none;
   background: #fff;
   color: #64748b;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   cursor: pointer;
   transition:
       border-color .15s ease,
@@ -371,7 +394,7 @@ function formatCellValue(value) {
 
 .page-num {
   min-width: 48px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: #8a94a3;
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -394,7 +417,7 @@ function formatCellValue(value) {
   outline: none;
   background: #fff;
   color: #64748b;
-  font-size: 15px;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   line-height: 1;
   cursor: pointer;
@@ -458,13 +481,13 @@ function formatCellValue(value) {
 .empty-title {
   margin-bottom: 6px;
   color: #475569;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: 600;
 }
 
 .empty-description {
   color: #a0a9b5;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   line-height: 1.6;
   text-align: center;
 }
@@ -507,17 +530,9 @@ function formatCellValue(value) {
     border-radius: 10px;
   }
 
-  .custom-table {
-    font-size: 12px;
-  }
-
   .custom-table th,
   .custom-table td {
     padding: 10px 12px;
-  }
-
-  .custom-table th {
-    font-size: 11px;
   }
 
   .col-index {

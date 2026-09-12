@@ -1,5 +1,10 @@
 import { ref, computed } from 'vue'
 
+/**
+ * Excel 数据搜索与筛选的组合式函数
+ * 管理多个 Excel 文件数据，支持按文件筛选、关键词模糊搜索、动态生成列名与统计信息
+ * @returns {Object} 包含响应式状态、计算属性与操作方法
+ */
 export function useExcelSearch() {
   // 所有文件数据：{ fileName, data: [row, ...] }
   const fileDataList = ref([])
@@ -109,7 +114,6 @@ export function useExcelSearch() {
       (selectedFileNames.value === null || selectedFileNames.value.length === fileNames.value.length)
   })
   return {
-    fileDataList,
     selectedFileNames,
     searchQuery,
     allFlattenData,
