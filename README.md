@@ -9,7 +9,7 @@ A web tool for quickly checking whether a journal or conference is included in t
 
 ## Features
 
-* **12 Built-in Directory Datasets** — Includes 12 Excel datasets from the directory, ready to use out of the box (conference list to be added later).
+* **Full support for journals and conferences** — All journal and conference documents are built-in and searchable within the system.
 * **Custom Upload** — Upload your own Excel files as needed. Files are processed entirely in your local browser and are never uploaded to any server.
 * **Fuzzy Search** — Match keywords across all columns without specifying a field.
 * **Filter by File** — Search within one or more selected files only.
@@ -26,13 +26,13 @@ A web tool for quickly checking whether a journal or conference is included in t
 ## Local Development
 
 ```bash
-git clone https://github.com/ACKits/xjtu-journals.git
+git clone https://github.com/pf-z/xjtu-journals.git
 cd xjtu-journals
 npm install
 npm run dev
 ```
 
-The tool automatically generates and reads `public/excel/index.json` and loads the files listed in it.
+The tool automatically creates and reads the `public/excel/journals/index.json` and `public/excel/conferences/index.json` files, then loads the files listed within them.
 
 ## Production Build
 
