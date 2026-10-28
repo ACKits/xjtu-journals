@@ -229,14 +229,11 @@ onUnmounted(() => {
 
         <div class="footer-meta">
           <div class="footer-badges">
-            <a href="https://github.com/ACKits/xjtu-journals" target="_blank" rel="noopener noreferrer" >
-              <img src="https://img.shields.io/badge/GitHub-ACKits-181717?style=flat&logo=github&logoColor=white" alt="GitHub" />
-            </a>
             <img src="https://img.shields.io/badge/License-MIT-2563eb?style=flat" alt="MIT License" />
             <img src="https://visitor-badge.laobi.icu/badge?page_id=ACKits.xjtu-journals&left_text=Visitors" alt="visitor badge"/>
           </div>
 
-          <span class="footer-copy">© 2026 ACKits</span>
+          <span class="footer-copy">© 2026</span>
         </div>
       </div>
     </footer>
