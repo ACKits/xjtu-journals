@@ -1,3 +1,18 @@
+<script setup>
+defineProps({
+  modelValue: {
+    type: String,
+    default: ''
+  },
+  placeholder: {
+    type: String,
+    default: '输入关键字检索...'
+  }
+})
+defineEmits(['update:modelValue'])
+</script>
+
+
 <template>
   <div class="search-bar-wrap">
     <div class="section-label">
@@ -13,21 +28,11 @@
           type="text"
           :value="modelValue"
           @input="$emit('update:modelValue', $event.target.value)"
-          placeholder="输入关键词搜索 Excel 数据..."
+          :placeholder="placeholder"
       />
     </div>
   </div>
 </template>
-
-<script setup>
-defineProps({
-  modelValue: {
-    type: String,
-    default: ''
-  }
-})
-defineEmits(['update:modelValue'])
-</script>
 
 <style scoped>
 .search-bar-wrap {
@@ -39,8 +44,8 @@ defineEmits(['update:modelValue'])
   align-items: center;
   gap: 7px;
   margin-bottom: 7px;
-  color: #64748b;
-  font-size: 12px;
+  color: #475569;
+  font-size: var(--font-size-base);
   font-weight: 600;
   line-height: 1.4;
 }
@@ -63,7 +68,7 @@ defineEmits(['update:modelValue'])
   box-sizing: border-box;
   background: #fff;
   color: #374151;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   line-height: 1;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }

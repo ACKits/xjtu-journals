@@ -1,0 +1,26 @@
+/* src/styles/font-size.css */
+
+/* 默认：所有设备 1rem = 14px */
+html {
+    font-size: 14px;
+}
+
+/* 平板：1rem = 15px */
+@media screen and (min-width: 768px) and (max-width: 1199px) {
+    html {
+        font-size: 15px;
+    }
+}
+
+:root {
+    /* 辅助文字 */
+    --font-size-xs: 0.857rem;   /* 12px基准 */
+    --font-size-sm: 0.929rem;   /* 13px基准 */
+
+    /* 基准/正文 */
+    --font-size-base: 1rem;
+
+    /* 标题 */
+    --font-size-xl: 1.286rem;
+    --font-size-2xl: 1.429rem;
+}
